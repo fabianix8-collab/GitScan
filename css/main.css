@@ -888,6 +888,72 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* --- PAGINATION ---------------------------------------- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.page-btn {
+  font-family: var(--font);
+  font-size: 0.72rem;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.page-btn:hover:not(:disabled) {
+  color: var(--cyan);
+  border-color: var(--cyan-border);
+}
+
+.page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  min-width: 80px;
+  text-align: center;
+}
+
+/* --- COLLAPSIBLE --------------------------------------- */
+.btn-show-more {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+  text-align: center;
+}
+
+.btn-show-more:hover {
+  color: var(--cyan);
+  border-color: var(--cyan-border);
+}
+
+/* Extra info fields */
+.cve-title    { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+.cve-ecosystem { font-size: 0.7rem; color: var(--text-muted); }
+
 /* --- UTILS --------------------------------------------- */
 .hidden { display: none !important; }
 

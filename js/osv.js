@@ -111,24 +111,45 @@ export function normalizeOSVResults(results) {
  * OSV puede tenerla en database_specific, severity array, o CVSS.
  */
 function extractSeverity(vuln) {
-  // Intentar desde el array severity estándar
+  // 1. Array severity estándar — CVSS v3 o v2 numérico
   if (vuln.severity?.length) {
     for (const s of vuln.severity) {
-      if (s.type === 'CVSS_V3' && s.score) {
-        const score = parseFloat(s.score);
-        if (score >= 9.0) return 'CRITICAL';
-        if (score >= 7.0) return 'HIGH';
-        if (score >= 4.0) return 'MEDIUM';
-        return 'LOW';
+      if ((s.type === 'CVSS_V3' || s.type === 'CVSS_V2') && s.score) {
+        const numeric = parseFloat(s.score);
+        if (!isNaN(numeric)) {
+          if (numeric >= 9.0) return 'CRITICAL';
+          if (numeric >= 7.0) return 'HIGH';
+          if (numeric >= 4.0) return 'MEDIUM';
+          return 'LOW';
+        }
+        // score puede ser un vector string "CVSS:3.1/AV:N/..." — extraer base score
+        const vectorMatch = s.score.match(/\/(\d+\.\d+)$/);
+        if (vectorMatch) {
+          const numeric2 = parseFloat(vectorMatch[1]);
+          if (numeric2 >= 9.0) return 'CRITICAL';
+          if (numeric2 >= 7.0) return 'HIGH';
+          if (numeric2 >= 4.0) return 'MEDIUM';
+          return 'LOW';
+        }
       }
     }
   }
 
-  // Fallback desde database_specific (GitHub Security Advisory)
-  const ghsa = vuln.database_specific?.severity;
-  if (ghsa) {
-    const upper = ghsa.toUpperCase();
+  // 2. database_specific.severity — presente en GHSA y OSV directo
+  const dbSev = vuln.database_specific?.severity;
+  if (dbSev) {
+    const upper = dbSev.toUpperCase();
     if (['CRITICAL','HIGH','MEDIUM','LOW'].includes(upper)) return upper;
+  }
+
+  // 3. affected[].ecosystem_specific — algunos ecosistemas lo ponen aquí
+  for (const affected of (vuln.affected || [])) {
+    const ecoSev = affected.ecosystem_specific?.severity
+                || affected.database_specific?.severity;
+    if (ecoSev) {
+      const upper = ecoSev.toUpperCase();
+      if (['CRITICAL','HIGH','MEDIUM','LOW'].includes(upper)) return upper;
+    }
   }
 
   return 'UNKNOWN';
