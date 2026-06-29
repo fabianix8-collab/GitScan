@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitScan — Repository Security Analyzer</title>
+  <meta name="description" content="AI-powered security analysis for public GitHub repositories. Detect exposed secrets, CVEs, and sensitive files instantly." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-bracket">[</span>
+        <span class="logo-name">GitScan</span>
+        <span class="logo-bracket">]</span>
+        <span class="logo-version">v1.0</span>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn" id="btn-open-config" title="Configure API keys">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
+          </svg>
+          Config
+        </button>
+        <a class="nav-btn" href="https://github.com/fabianix8-collab" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85 0 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10.01 10.01 0 0 0 22 12c0-5.52-4.48-10-10-10z"/>
+          </svg>
+          fabianix8-collab
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO / SCAN INPUT -->
+  <main>
+    <section class="hero" id="section-hero">
+      <div class="hero-inner">
+        <p class="hero-eyebrow">Security Intelligence</p>
+        <h1 class="hero-title">Scan any public repository.<br/>Find what shouldn't be there.</h1>
+        <p class="hero-subtitle">CVE detection · Exposed secrets · Sensitive file mapping · AI-powered risk summary</p>
+
+        <div class="scan-form" id="scan-form">
+          <div class="scan-input-wrapper">
+            <span class="scan-prompt">$</span>
+            <input
+              type="url"
+              id="input-repo-url"
+              class="scan-input"
+              placeholder="github.com/owner/repository"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <button class="btn-scan" id="btn-scan">
+            Run Scan
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="demo-repos">
+          <span class="demo-label">Try with:</span>
+          <button class="demo-chip" data-url="https://github.com/nicowillis/intentionally-vulnerable">nicowillis/intentionally-vulnerable</button>
+          <button class="demo-chip" data-url="https://github.com/OWASP/WebGoat">OWASP/WebGoat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE / PROGRESS -->
+    <section class="pipeline-section hidden" id="section-pipeline">
+      <div class="pipeline-inner">
+        <div class="pipeline-header">
+          <span class="pipeline-repo-label" id="pipeline-repo-label"></span>
+          <span class="pipeline-status" id="pipeline-status">Initializing...</span>
+        </div>
+        <div class="pipeline-steps" id="pipeline-steps">
+          <!-- Steps injected by JS -->
+        </div>
+        <div class="pipeline-bar-track">
+          <div class="pipeline-bar-fill" id="pipeline-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="report-section hidden" id="section-report">
+      <div class="report-inner">
+
+        <!-- Score banner -->
+        <div class="score-banner" id="score-banner">
+          <div class="score-left">
+            <div class="score-ring-wrapper">
+              <svg class="score-ring" viewBox="0 0 120 120">
+                <circle class="score-ring-bg" cx="60" cy="60" r="50"/>
+                <circle class="score-ring-fill" id="score-ring-fill" cx="60" cy="60" r="50"
+                  stroke-dasharray="314"
+                  stroke-dashoffset="314"/>
+              </svg>
+              <span class="score-value" id="score-value">—</span>
+            </div>
+            <div class="score-meta">
+              <p class="score-label">Security Score</p>
+              <p class="score-grade" id="score-grade">Analyzing...</p>
+            </div>
+          </div>
+          <div class="score-right" id="score-stats">
+            <!-- Stat chips injected by JS -->
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="report-card" id="card-ai-summary">
+          <div class="card-header">
+            <span class="card-tag tag-ai">AI</span>
+            <h2 class="card-title">Risk Summary</h2>
+          </div>
+          <div class="card-body">
+            <p class="ai-summary-text" id="ai-summary-text">
+              <span class="skeleton-line"></span>
+              <span class="skeleton-line short"></span>
+            </p>
+          </div>
+        </div>
+
+        <!-- CVE Findings -->
+        <div class="report-card" id="card-cves">
+          <div class="card-header">
+            <span class="card-tag tag-critical">CVE</span>
+            <h2 class="card-title">Dependency Vulnerabilities</h2>
+            <span class="card-count" id="cve-count">—</span>
+          </div>
+          <div class="card-body" id="cve-body">
+            <p class="empty-state">No vulnerable dependencies detected.</p>
+          </div>
+        </div>
+
+        <!-- Secrets -->
+        <div class="report-card" id="card-secrets">
+          <div class="card-header">
+            <span class="card-tag tag-high">SECRET</span>
+            <h2 class="card-title">Exposed Secrets</h2>
+            <span class="card-count" id="secrets-count">—</span>
+          </div>
+          <div class="card-body" id="secrets-body">
+            <p class="empty-state">No secrets detected in scanned files.</p>
+          </div>
+        </div>
+
+        <!-- Sensitive Files -->
+        <div class="report-card" id="card-files">
+          <div class="card-header">
+            <span class="card-tag tag-medium">FILES</span>
+            <h2 class="card-title">Sensitive File Exposure</h2>
+            <span class="card-count" id="files-count">—</span>
+          </div>
+          <div class="card-body" id="files-body">
+            <p class="empty-state">No sensitive files found in repository root.</p>
+          </div>
+        </div>
+
+        <!-- Scan again -->
+        <div class="report-footer">
+          <button class="btn-secondary" id="btn-scan-again">← New Scan</button>
+          <span class="report-timestamp" id="report-timestamp"></span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ERROR STATE -->
+    <section class="error-section hidden" id="section-error">
+      <div class="error-inner">
+        <p class="error-code">ERR</p>
+        <p class="error-message" id="error-message">Something went wrong.</p>
+        <p class="error-detail" id="error-detail"></p>
+        <button class="btn-secondary" id="btn-error-retry">Try again</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- CONFIG MODAL -->
+  <div class="modal-overlay hidden" id="modal-config">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">API Configuration</h2>
+        <button class="modal-close" id="btn-close-config">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Keys are stored locally in your browser and never sent to any server other than their respective APIs.</p>
+
+        <div class="field-group">
+          <label class="field-label" for="input-github-token">
+            GitHub Personal Access Token
+            <span class="field-optional">optional — increases rate limit from 60 to 5,000 req/hr</span>
+          </label>
+          <input type="password" id="input-github-token" class="field-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          <a class="field-link" href="https://github.com/settings/tokens/new?scopes=public_repo&description=GitScan" target="_blank" rel="noopener">
+            Generate a token →
+          </a>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="input-groq-key">
+            Groq API Key
+            <span class="field-optional">required for AI risk summary</span>
+          </label>
+          <input type="password" id="input-groq-key" class="field-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          <a class="field-link" href="https://console.groq.com/keys" target="_blank" rel="noopener">
+            Get a free key →
+          </a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-clear-config">Clear saved keys</button>
+        <button class="btn-primary" id="btn-save-config">Save keys</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
