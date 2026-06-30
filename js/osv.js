@@ -1,42 +1,57 @@
 /**
  * osv.js — Cliente para OSV.dev (Open Source Vulnerabilities)
  *
- * Usa el endpoint /v1/querybatch para resolver todos los paquetes
- * en una sola llamada HTTP — eficiente y respetuoso con rate limits.
+ * IMPORTANTE: el endpoint /v1/querybatch solo devuelve { id, modified }
+ * por cada vulnerabilidad — NO incluye severity, summary, ni database_specific.
+ * Por eso es obligatorio hacer un segundo fetch a /v1/vulns/{id} para
+ * obtener el detalle completo de cada vulnerabilidad encontrada.
  *
  * Docs: https://google.github.io/osv.dev/api/
  */
 
 const OSV_BATCH_URL = 'https://api.osv.dev/v1/querybatch';
-const BATCH_SIZE    = 1000; // límite del endpoint
+const OSV_VULN_URL  = 'https://api.osv.dev/v1/vulns';
+const BATCH_SIZE    = 1000; // límite del endpoint querybatch
+const DETAIL_CONCURRENCY = 10; // requests paralelos al endpoint de detalle
 
 /**
  * Consulta vulnerabilidades para un array de dependencias.
  * @param {{ name: string, version: string, ecosystem: string }[]} dependencies
- * @returns {{ dependency, vulnerabilities }[]} solo deps con vulns
+ * @returns {{ dependency, vulnerabilities }[]} solo deps con vulns, con detalle completo
  */
 export async function queryOSV(dependencies) {
   if (!dependencies.length) return [];
 
-  // Filtrar deps sin versión — OSV necesita versión para hacer match exacto
   const queryable = dependencies.filter(d => d.version && d.name);
 
-  // Partir en batches si el repo tiene muchas dependencias
   const batches = chunk(queryable, BATCH_SIZE);
   const allResults = [];
-
   for (const batch of batches) {
     const results = await fetchBatch(batch);
     allResults.push(...results);
   }
 
-  // Filtrar solo los que tienen vulnerabilidades
-  return allResults
+  // Paso 1: querybatch nos da solo IDs por dependencia
+  const withIds = allResults
     .map((result, i) => ({
-      dependency:      queryable[i],
-      vulnerabilities: result.vulns || [],
+      dependency: queryable[i],
+      vulnIds: (result.vulns || []).map(v => v.id),
     }))
-    .filter(r => r.vulnerabilities.length > 0);
+    .filter(r => r.vulnIds.length > 0);
+
+  if (!withIds.length) return [];
+
+  // Paso 2: recolectar todos los IDs únicos y pedir su detalle completo
+  const uniqueIds = [...new Set(withIds.flatMap(r => r.vulnIds))];
+  const detailsById = await fetchVulnDetails(uniqueIds);
+
+  // Paso 3: reconstruir con el detalle completo
+  return withIds.map(({ dependency, vulnIds }) => ({
+    dependency,
+    vulnerabilities: vulnIds
+      .map(id => detailsById.get(id))
+      .filter(Boolean),
+  }));
 }
 
 async function fetchBatch(deps) {
@@ -62,6 +77,28 @@ async function fetchBatch(deps) {
 
   const data = await res.json();
   return data.results || [];
+}
+
+/**
+ * Pide el detalle completo de cada vulnerabilidad por ID.
+ * Se ejecuta con concurrencia limitada para no saturar la API pública.
+ */
+async function fetchVulnDetails(ids) {
+  const detailsById = new Map();
+  const batches = chunk(ids, DETAIL_CONCURRENCY);
+
+  for (const batch of batches) {
+    const results = await Promise.allSettled(
+      batch.map(id => fetch(`${OSV_VULN_URL}/${id}`).then(r => r.ok ? r.json() : null))
+    );
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled' && result.value) {
+        detailsById.set(batch[i], result.value);
+      }
+    });
+  }
+
+  return detailsById;
 }
 
 /**

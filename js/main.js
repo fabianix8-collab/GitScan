@@ -26,7 +26,7 @@ const PIPELINE_STEPS = [
   { id: 'scan-files',   label: 'Scanning sensitive files' },
   { id: 'fetch-deps',   label: 'Reading dependency manifests' },
   { id: 'scan-secrets', label: 'Detecting exposed secrets' },
-  { id: 'query-osv',    label: 'Querying CVE database (OSV.dev)' },
+  { id: 'query-osv',    label: 'Querying CVE database and fetching details' },
   { id: 'ai-analysis',  label: 'Generating AI risk summary' },
 ];
 
