@@ -13,7 +13,7 @@ const SENSITIVE_PATTERNS = [
   // CRITICAL — Credenciales directas
   { pattern: /^\.env$/,                  severity: 'CRITICAL', reason: 'Environment variables file — may contain API keys, DB passwords, secrets' },
   { pattern: /\.env\.(local|prod|production|staging|development)$/, severity: 'CRITICAL', reason: 'Environment-specific config — likely contains live credentials' },
-  { pattern: /^\.env\.\w+$/,            severity: 'CRITICAL', reason: 'Environment variables file variant' },
+  { pattern: /^\.env\.(?!example$|sample$|template$|dist$)\w+$/, severity: 'CRITICAL', reason: 'Environment variables file variant' },
   { pattern: /^\.?htpasswd$/,           severity: 'CRITICAL', reason: 'Apache password file — contains hashed credentials' },
   { pattern: /id_rsa$/,                  severity: 'CRITICAL', reason: 'RSA private key' },
   { pattern: /id_dsa$/,                  severity: 'CRITICAL', reason: 'DSA private key' },
