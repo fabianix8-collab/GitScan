@@ -13,6 +13,20 @@ Paste a repo URL → get a security report covering vulnerable dependencies, exp
 
 Scanning [OWASP/WebGoat](https://github.com/OWASP/WebGoat) — a deliberately vulnerable Java application used for security training — surfaces 40 dependency CVEs (12 of them CRITICAL, including known RCE and deserialization vulnerabilities in `log4j`, `axis`, and `tomcat-catalina`) and 7 exposed database files committed to the repository. Every finding links to its CVE or GHSA advisory.
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01-hero.png" alt="GitScan landing page" width="400"/></td>
+    <td><img src="docs/screenshots/02-report-score.png" alt="Security score and CVE findings" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Terminal-style landing page — paste a repo URL or try a known-vulnerable demo repo</sub></td>
+    <td align="center"><sub>Security score, AI risk summary, and CVE findings with real CVE IDs and severities</sub></td>
+  </tr>
+</table>
+
+<img src="docs/screenshots/03-cve-list-files.png" alt="Paginated CVE list and sensitive file exposure" width="820"/>
+<p align="center"><sub>Paginated CVE table (10 per page) and collapsible sensitive file list — no infinite scroll, even on a 40-finding scan</sub></p>
+
 ## What it detects
 
 | Category | Method |
