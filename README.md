@@ -2,41 +2,45 @@
 
 AI-powered security analyzer for public GitHub repositories.
 
-Paste a repo URL → get a security report covering vulnerable dependencies, exposed secrets, and sensitive files — in seconds.
+Paste a repo URL → get a security report covering vulnerable dependencies, exposed secrets, and sensitive files — in seconds, entirely client-side.
 
 ![Security Score](https://img.shields.io/badge/status-live-00D9FF?style=flat-square&labelColor=0A0E1A)
 ![Stack](https://img.shields.io/badge/stack-Vanilla%20JS%20%2B%20Groq%20%2B%20OSV.dev-00D9FF?style=flat-square&labelColor=0A0E1A)
 
 ---
 
+## Live example
+
+Scanning [OWASP/WebGoat](https://github.com/OWASP/WebGoat) — a deliberately vulnerable Java application used for security training — surfaces 40 dependency CVEs (12 of them CRITICAL, including known RCE and deserialization vulnerabilities in `log4j`, `axis`, and `tomcat-catalina`) and 7 exposed database files committed to the repository. Every finding links to its CVE or GHSA advisory.
+
 ## What it detects
 
 | Category | Method |
 |---|---|
-| **Dependency CVEs** | OSV.dev batch API — npm, PyPI, Go, Maven, RubyGems, Cargo, Packagist |
-| **Exposed secrets** | Regex + entropy analysis across config files |
-| **Sensitive files** | 40+ patterns matched against the repository file tree |
-| **Risk summary** | Groq LLM (Llama 3) generates an executive-level analysis |
+| **Dependency CVEs** | OSV.dev — batch query + per-vulnerability detail fetch across npm, PyPI, Go, Maven, RubyGems, Cargo, Packagist |
+| **Exposed secrets** | 22 regex rules + Shannon entropy filtering to suppress false positives |
+| **Sensitive files** | 40+ path patterns matched against the full repository file tree |
+| **Risk summary** | Groq (Llama 3) generates an executive-level analysis from the consolidated findings |
 
-## Architecture
+## Architecture & design decisions
 
-```
-Browser
-├── GitHub REST API     → file tree + dependency manifests + config files
-├── OSV.dev /querybatch → single batch call for all packages
-├── Groq API            → AI risk summary (direct, no proxy)
-└── Local analysis      → secrets regex + sensitive file detection
-```
+This section exists because the choices below are deliberate trade-offs, not limitations.
 
-No backend. No server. All analysis runs client-side or hits public APIs directly.
+**No backend, by design.** GitScan runs entirely in the browser and talks directly to GitHub, OSV.dev, and Groq. There is no server to compromise, no API proxy to go down, and no infrastructure cost. For a static security tool, this is the correct shape — not a missing feature.
+
+**Bring-your-own-key (BYOK), not a shared backend key.** GitHub and Groq credentials are entered by the user and stored only in their browser's `localStorage` — never transmitted anywhere except the respective API. This is the same model used by Snyk's CLI, GitHub's own CLI tools, and most serious open-source security scanners: a tool that asks for your credentials to act on your behalf, rather than embedding a shared key that any anonymous visitor could exhaust or abuse. Embedding a personal API key in client-side code shipped to the public would be a real vulnerability in a security tool — the irony would not be lost on anyone reviewing the code.
+
+**Why OSV.dev needs two API calls per scan, not one.** The `/v1/querybatch` endpoint is fast but intentionally minimal — it returns only vulnerability IDs, not severity or descriptions. GitScan resolves the IDs in one batch call, then fetches full details (`/v1/vulns/{id}`) for each unique vulnerability found, with bounded concurrency to stay respectful of a free public API. This was discovered during testing, not assumed from documentation: the initial implementation surfaced every finding as `UNKNOWN` severity, which led to inspecting the actual API response shape rather than trusting the schema on paper.
+
+**No AI key required for the core scan.** CVE detection, secret scanning, and sensitive file mapping work immediately with zero configuration. The Groq key only unlocks the AI-generated risk summary; without it, GitScan falls back to a rule-based summary built from the same findings — degraded, not broken.
 
 ## Stack
 
-- **Vanilla JS (ES6 modules)** — no build step, no framework overhead
-- **GitHub REST API** — file tree and selective content fetching
+- **Vanilla JS (ES6 modules)** — no build step, no framework overhead, nothing to compile
+- **GitHub REST API** — file tree traversal and selective content fetching (no full-repo downloads)
 - **OSV.dev** — open-source CVE database, free, no auth required
 - **Groq** — LLM inference (Llama 3 8B), bring your own key
-- **GitHub Pages** — static hosting via Actions CI/CD
+- **GitHub Pages + Actions** — static hosting with CI/CD on every push to `main`
 
 ## Running locally
 
@@ -44,7 +48,7 @@ No backend. No server. All analysis runs client-side or hits public APIs directl
 git clone https://github.com/fabianix8-collab/gitscan.git
 cd gitscan
 
-# Serve with any static file server (ES modules require HTTP, not file://)
+# ES modules require an HTTP server, not file://
 npx serve .
 # or
 python3 -m http.server 8080
@@ -54,14 +58,14 @@ Then open `http://localhost:8080`.
 
 ## Configuration
 
-Click **Config** in the top-right corner to set your API keys. Keys are stored in `localStorage` — never sent anywhere except the respective APIs.
+Click **Config** in the top-right corner to set your API keys.
 
 | Key | Required | Purpose |
 |---|---|---|
-| GitHub PAT | Optional | Increases rate limit from 60 to 5,000 req/hr |
-| Groq API Key | Optional | Enables AI risk summary |
+| GitHub PAT | Optional | Raises the rate limit from 60 to 5,000 req/hr — recommended for repeated scans |
+| Groq API Key | Optional | Enables the AI-generated risk summary |
 
-[Generate a GitHub token →](https://github.com/settings/tokens/new?scopes=public_repo&description=GitScan)  
+[Generate a GitHub token →](https://github.com/settings/tokens/new?scopes=public_repo&description=GitScan)
 [Get a free Groq key →](https://console.groq.com/keys)
 
 ## Project structure
@@ -72,25 +76,25 @@ gitscan/
 ├── css/
 │   └── main.css
 ├── js/
-│   ├── main.js           # Orchestrator — UI state + pipeline
+│   ├── main.js           # Orchestrator — UI state + scan pipeline
 │   ├── github.js         # GitHub API client
-│   ├── osv.js            # OSV.dev batch CVE lookup
-│   ├── groq.js           # Groq AI analysis
-│   ├── report.js         # DOM renderer + score calculator
+│   ├── osv.js            # OSV.dev batch query + detail resolution
+│   ├── groq.js           # Groq AI analysis + rule-based fallback
+│   ├── report.js         # DOM renderer, score calculator, pagination
 │   └── scanner/
 │       ├── deps.js       # Dependency manifest parser (8 formats)
 │       ├── secrets.js    # Regex + entropy secret detection
 │       └── sensitive.js  # Sensitive file path detection
 └── .github/workflows/
-    └── deploy.yml        # Auto-deploy to GitHub Pages
+    └── deploy.yml        # Auto-deploy to GitHub Pages on push
 ```
 
 ## Roadmap
 
+- [ ] SAST: pattern-based detection of insecure code (hardcoded IPs, dangerous function calls, SQLi vectors)
 - [ ] PDF export of the security report
-- [ ] SAST patterns (hardcoded IPs, insecure functions, SQL injection vectors)
 - [ ] Historical scan comparison
-- [ ] Badge generation for repositories
+- [ ] Shareable badge generation for repositories
 
 ---
 
