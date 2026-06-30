@@ -1,4 +1,4 @@
-# [GitScan](https://fabianix8-collab.github.io/gitscan/)
+# [GitScan](https://fabianix8-collab.github.io/GitScan/)
 
 AI-powered security analyzer for public GitHub repositories.
 
